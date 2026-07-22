@@ -1,0 +1,8 @@
+add_executable(${EXECUTABLE_NAME}  source/main.c)
+
+target_include_directories(${EXECUTABLE_NAME} PRIVATE include)
+target_include_directories(${EXECUTABLE_NAME} PRIVATE ../cErrorDriverLib/publicInclude)
+target_include_directories(${EXECUTABLE_NAME}  PRIVATE source)
+
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${ERROR_DRIVER_LIBRARY_NAME} )
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC commonMacros )
