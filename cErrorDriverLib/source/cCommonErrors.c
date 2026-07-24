@@ -14,7 +14,11 @@
 
 /** Error messsages only compiled and used if full errror message is enabled.*/
 #if ( ERROR_MESSAGE_FULL == DEF_TRUE )
-
+/** Typedefs used for the driver  */
+typedef struct
+{
+    sCommonDriverControlStruct_t _driverControl; /* The error code for this error */
+} sCommonErrorControlStruct_t;
 /************************** Static Global Variables ********************************/
 /**
  * @brief All source files should have a module name and ID. This allows for more precise error reporting.
@@ -24,25 +28,27 @@ static const uint8_t moduleName[] = "CommonErrors";
 /**
  * @brief Control structure for this file allowing static variables to be called from a THIS pointer.
  */
-static const sCommonDriverControlStruct_t commonErrorModuleControl = 
+static const sCommonErrorControlStruct_t commonErrorModuleControl = 
 {
-    ._driverInfo = {
-        ._moduleName = moduleName,
-        ._moduleID   = 0x0000,
-        ._isInitialized = true
-    },
-    ._driverAccessors = {
-        .getModuleIdFunction = NULL,
-        .getModuleVersionStringFunction = NULL,
-        .getModuleNameFunction = NULL,
-        .isDriverInitializedFunction = NULL
+    ._driverControl = {
+        ._driverInfo = {
+            ._moduleName = moduleName,
+            ._moduleID   = 0x0000,
+            ._isInitialized = true
+        },
+        ._driverAccessors = {
+            .getModuleIdFunction = NULL,
+            .getModuleVersionStringFunction = NULL,
+            .getModuleNameFunction = NULL,
+            .isDriverInitializedFunction = NULL
+        }
     }
 };
 
 /**
  * @brief Pointer to the control structure.
  */
-static sCommonDriverControlStruct_t const * const THIS = &commonErrorModuleControl;
+static sCommonErrorControlStruct_t const * const THIS = &commonErrorModuleControl;
 
 /**
  * @brief Array of Error codes and their corresponding error messages. This is used to retrieve the error message given an error code.
@@ -71,27 +77,27 @@ static const sErrorCodeMessagePair_t commonErrorCodeMessagePairs[] =
  * @brief Function to get the error message corresponding to a common error code.
  * @param errorCode The common error code to get the message for.
  * @param errorMessage Pointer to a buffer to store the error message.
- * @returns A pointer to the error message string.
+ * @returns An error struct with ERROR_NONE if successful, or an error struct with an error code if unsuccessful.
  */
 sErrorInfo_t getCommonErrorMessageFromErrorCode( uint16_t const errorCode,
                                                  uint8_t const * errorMessage )
 {
-    sErrorInfo_t errorInfo = BLANK_ERROR_STRUCT;
+    sErrorInfo_t retValue = BLANK_ERROR_STRUCT;
     errorMessage = NULL;
     /**
      * range check the code.
      */
-    if( errorCode >= LAST_COMMON_ERROR_CODE )
+    if( errorCode < LAST_COMMON_ERROR_CODE )
     {
-        errorInfo = CREATE_ERROR( ERROR_INVALID_PARAMETER, 
-                                  commonErrorCodeMessagePairs[ERROR_INVALID_PARAMETER].errorMessage );
+        retValue = CREATE_ERROR( ERROR_INVALID_PARAMETER, 
+                                 commonErrorCodeMessagePairs[ERROR_INVALID_PARAMETER]._errorMessage );
     }
     else
     {
-        errorMessage = commonErrorCodeMessagePairs[errorCode].errorMessage;
+        errorMessage = commonErrorCodeMessagePairs[errorCode]._errorMessage;
     }
    
-    return errorInfo;
+    return ( retValue );
 }
 
 /****************************************************Static Functions  ***********************************/

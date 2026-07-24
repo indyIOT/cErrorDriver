@@ -23,6 +23,7 @@ extern "C" {
 #define MAX_FILENAME_LENGTH_BYTES                                             52
 #define END_OF_COMMON_ERRORS                                              0x0020
 #define ERROR_MESSAGE_FULL                                              DEF_TRUE
+#define VERIFY_MEMORY_WRITE                                                 TRUE
 #endif // CUSTOM_ERROR_DRIVER_CONFIG
 #ifdef __cplusplus
 }  /* extern "C" */

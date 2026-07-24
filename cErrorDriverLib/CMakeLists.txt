@@ -1,7 +1,7 @@
 # ##############################################################################
-# CMakeLists.txt — cErrorDriverLib
+# CMakeLists.txt — cErrorDriver
 #
-# Builds the error driver library (cErrorDriverLib) as either a static or shared
+# Builds the error driver library (cErrorDriver) as either a static or shared
 # library depending on the COMPILE_ERROR_DRIVER_LIBRARY_STATIC flag set by the
 # parent CMakeLists.txt.
 #
@@ -12,12 +12,11 @@
 #
 # Dependencies:
 #   commonMacros  — header-only INTERFACE target providing shared project macros
-#                   (AG_UNUSED, AG_ARRAY_LEN, AG_BIT, etc.)
-#
+#   commonTypes   — header-only INTERFACE target providing shared project types.
 # Version header:
 #   cErrorDriverVersion.h is auto-generated into the build tree on every
 #   cmake --build invocation via generateVersion.cmake. It is written to:
-#     <binary_dir>/generated/cErrorDriverVersion.h
+#     <publicInclude>/generated/cErrorDriverVersion.h
 #   and exposes ERROR_DRIVER_VERSION_MAJOR/MINOR/PATCH/BUILD_TYPE/STRING.
 #   A stub is written at configure time so the file exists for dep scanning.
 #
@@ -28,13 +27,15 @@
 # ##############################################################################
 
 # --- Version header setup -----------------------------------------------------
-set(VERSION_HEADER_DIR  ${CMAKE_CURRENT_BINARY_DIR}/generated)
+set(VERSION_HEADER_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/publicInclude/generated)
 set(VERSION_HEADER_FILE ${VERSION_HEADER_DIR}/cErrorDriverVersion.h)
 
 if( COMPILE_ERROR_DRIVER_LIBRARY_STATIC )
     set(ERROR_DRIVER_BUILD_TYPE "STATIC")
+    set(ERROR_DRIVER_BUILD_TYPE_ENUM STATIC_LIBRARY_BUILD)
 else()
     set(ERROR_DRIVER_BUILD_TYPE "DYNAMIC")
+    set(ERROR_DRIVER_BUILD_TYPE_ENUM DYNAMIC_LIBRARY_BUILD)
 endif()
 
 # Write a stub at configure time so the path exists and dependency scanning works
@@ -66,7 +67,6 @@ endif()
 target_include_directories(${ERROR_DRIVER_LIBRARY_NAME}
     PRIVATE
         include
-        ../../cCommonMacros/include
         ../../cCommonTypes/include
         ../../cLoggingDriver/cLoggingDriverLib/publicInclude
         ../../cSemaphore/cSemaphoreLib/publicInclude
@@ -76,7 +76,7 @@ target_include_directories(${ERROR_DRIVER_LIBRARY_NAME}
 
 target_link_libraries(${ERROR_DRIVER_LIBRARY_NAME}
     PUBLIC
-        commonMacros
+        cCommonMacros
         commonTypes
         cLoggingDriverLib
         cSemaphoreLib
@@ -95,7 +95,9 @@ add_custom_target(GenerateErrorDriverVersion ALL
     COMMAND ${CMAKE_COMMAND}
         -DVERSION_MAJOR=${PROJECT_VERSION_MAJOR}
         -DVERSION_MINOR=${PROJECT_VERSION_MINOR}
+        -DVERSION_PATCH=${PROJECT_VERSION_PATCH}
         -DVERSION_BUILD_TYPE=${ERROR_DRIVER_BUILD_TYPE}
+        -DVERSION_BUILD_TYPE_ENUM=${ERROR_DRIVER_BUILD_TYPE_ENUM}
         -DOUTPUT_FILE=${VERSION_HEADER_FILE}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/generateVersion.cmake
     COMMENT "Regenerating cErrorDriverVersion.h"
@@ -115,7 +117,8 @@ if( UNIT_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unittest/cErrorDriver_test
     target_include_directories(cErrorDriverTest
         PRIVATE
             include
-            source
+        ../../cCommonMacros/include
+        ../../cCommonTypes/include
     )
 
     target_link_libraries(

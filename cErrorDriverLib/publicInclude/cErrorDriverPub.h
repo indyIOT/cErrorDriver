@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cErrorDriverConfig.h"
-#include "CommonTypes.h"
+#include "commonTypes.h"
 #ifndef C_ERROR_DRIVER_PUB_H
 #define C_ERROR_DRIVER_PUB_H
 #ifdef __cplusplus
@@ -68,14 +68,12 @@ typedef struct
 /**************************** HELPER MACROS ***********************************/
 #if ( ERROR_MESSAGE_FULL == DEF_TRUE )
 #define BLANK_ERROR_STRUCT {{ ERROR_NONE, 0, 0, 0, { 0 }, 0, 0 }, { { 0 }, { 0 } } }
-#define CREATE_ERROR( errorCode, errorMessage ) \
-    createErrorInfo( errorCode, THIS->_driverControl._driverInfo._moduleID, __LINE__ , errorMessage, THIS->_driverControl._driverInfo._moduleName )
 #else
 #define BLANK_ERROR_STRUCT {{ ERROR_NONE, 0, 0, 0, { 0 }, 0, 0 } }
-#define CREATE_ERROR( errorCode, errorMessage ) \
-    createErrorInfo( errorCode, THIS->_driverControl._driverInfo._moduleID, __LINE__ , NULL, NULL )
 #endif
 
+#define CREATE_ERROR( errorCode, errorMessage ) \
+    createErrorInfo( errorCode, THIS->_driverControl._driverInfo._moduleID, __LINE__ , errorMessage, THIS->_driverControl._driverInfo._moduleName )
 
 /**
  * @brief Function to log an error with the error driver. 

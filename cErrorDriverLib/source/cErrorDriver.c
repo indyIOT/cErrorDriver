@@ -15,11 +15,7 @@
 #include "cLoggingDriverPub.h"
 #include "cErrorDriverVersion.h"
 #include "cCommonErrorCodes.h"
-
- 
-static const uint8_t moduleName[] = "ErrorDriver";
-static uint8_t const * const getModuleName( void );
-
+/********************************Module Type definitions **********************/
 typedef struct
 {
     sCommonDriverControlStruct_t _driverControl; /* Control structure for the error driver */
@@ -30,32 +26,43 @@ typedef struct
 } sErrorDriverControlStruct_t;
 
 
+/********************************Static Module Accessor functions Prototypes *************/
+static uint16_t getModuleId( void );
+static uint8_t const * getModuleVersionString( void );
+static sCommonVersionStruct_t getModuleVersion( void );
+static uint8_t const * getModuleName( void );
+static bool isDriverInitialized( void );
+/********************************Static Global Variables **********************/
+static const uint8_t moduleName[] = "ErrorDriver";
+static const uint8_t noErrorMessage[] = "No error message available.";
+
+
 static sErrorDriverControlStruct_t errorDriverControlStruct = { 
     ._driverControl = { 
         ._driverInfo = { ._isInitialized = false,
-                        ._moduleID = 0 ,
+                        ._moduleID = 0,
+                        ._moduleVersionString = ERROR_DRIVER_VERSION_STRING,
+                        ._moduleVersion = { ._major = ERROR_DRIVER_VERSION_MAJOR,
+                                            ._minor = ERROR_DRIVER_VERSION_MINOR,
+                                            ._patch = ERROR_DRIVER_VERSION_PATCH,
+                                            ._buildType = ERROR_DRIVER_VERSION_BUILD_TYPE_ENUM
+                        },
                         ._moduleName = moduleName },
-        
-    }, .readMemoryFunction = NULL, .writeMemoryFunction = NULL, ._memoryAddress = 0, ._memorySizeInBytes = 0 };
+        ._driverAccessors = { .getModuleIdFunction = getModuleId,
+                            .getModuleVersionStringFunction = getModuleVersionString,
+                            .getModuleNameFunction = getModuleName,
+                            .getModuleVersionFunction = getModuleVersion,
+                            .isDriverInitializedFunction = isDriverInitialized },
+    }, 
+    .readMemoryFunction = NULL, 
+    .writeMemoryFunction = NULL, 
+    ._memoryAddress = 0U, 
+    ._memorySizeInBytes = 0U 
+};
+
 static sErrorDriverControlStruct_t * const THIS = &errorDriverControlStruct;
 
-/** 
- * @brief Get the name of the error module.
- * @return Pointer to a string containing the module name.
- */
-static uint8_t const * const getModuleName( void )
-{
-    return (uint8_t const * const)moduleName;
-}
-
-/**
- * @brief Get the version string of the error module.
- * @return Pointer to a string containing the version of the module.
- */
-uint8_t const * getModuleVersionString( void )
-{
-    return (uint8_t const *)ERROR_DRIVER_VERSION_STRING;
-}
+/****************************** Module Function implementations ***************/
 
 /**
  * @brief Enter a spin loop after a debug assert failure.
@@ -96,29 +103,29 @@ sErrorInfo_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
     {
         if( readMemory == NULL || writeMemory == NULL )
         {
-            retValue = CREATE_ERROR( ERROR_NULL_POINTER, "" );
+            retValue = CREATE_ERROR( ERROR_NULL_POINTER, NULL );
             LOG_CRITICAL( "Error Driver Initialization Failed: Read or Write Memory function pointer is NULL." );
         }
         else
         {
             if( memorySizeInBytes < sizeof( sErrorInfo_t ) )
             {
-                retValue = CREATE_ERROR( ERROR_INVALID_PARAMETER, "" );
+                retValue = CREATE_ERROR( ERROR_INVALID_PARAMETER, NULL );
                 LOG_CRITICAL( "Error Driver Initialization Failed: Memory size is too small. Minimum size required is %u bytes.", sizeof( sErrorInfo_t ) );
             }
             else
             {
-                THIS->_driverControl._driverInfo.readMemoryFunction = readMemory;
-                THIS->_driverControl._driverInfo.writeMemoryFunction = writeMemory;
-                THIS->_driverControl._driverInfo._memoryAddress = memoryAddress;
-                THIS->_driverControl._driverInfo._memorySizeInBytes = memorySizeInBytes;
+                THIS->readMemoryFunction = readMemory;
+                THIS->writeMemoryFunction = writeMemory;
+                THIS->_memoryAddress = memoryAddress;
+                THIS->_memorySizeInBytes = memorySizeInBytes;
                 THIS->_driverControl._driverInfo._isInitialized = true;
             }
         }
     }
     else
     {
-        retValue = CREATE_ERROR( ERROR_ALREADY_INITIALIZED, "" );
+        retValue = CREATE_ERROR( ERROR_ALREADY_INITIALIZED, NULL );
     }
     return retValue;
 }
@@ -138,47 +145,98 @@ sErrorInfo_t createErrorInfo( uint16_t errorCode,
                                  uint8_t const * const moduleName )
 {
     sErrorInfo_t retValue = BLANK_ERROR_STRUCT;
-    sErrorInfo_t functionError = BLANK_ERROR_STRUCT;
+    uint16_t writeCheck = ERROR_NONE;
     size_t errorMessageLength = 0;
     uint8_t const * errorMessagePtr = errorMessage;
 
-    /** Only fill this structure out if the error code is non-zero */
+    /* Only fill this structure out if the error code is non-zero */
     if( errorCode != ERROR_NONE )
     {
         retValue._compact._errorCode = errorCode;
         retValue._compact._fileModuleEnum = fileModuleEnum;
         retValue._compact._lineNumber = lineNumber;
         /** Common Errors are just that. */
-        if( errorCode < END_OF_COMMON_ERRORS )
+        if( ( errorCode < END_OF_COMMON_ERRORS ) && 
+            ( ( errorMessagePtr == NULL ) || 
+              ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) ) )
         {
-            functionError = getCommonErrorMessageFromErrorCode( errorCode, errorMessagePtr );
+            ( void )getCommonErrorMessageFromErrorCode( errorCode, errorMessagePtr );
         }
 
-        /* If there was no error retrieving the common error message or it was not a common
-           error. */
-        if( functionError._compact._errorCode == ERROR_NONE )
+        /* If we still have no error message then we should use the no error message available. */
+        if( ( errorMessagePtr == NULL ) || 
+            ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) )
         {
+            errorMessagePtr = noErrorMessage;
+        }
+
+        if( errorMessagePtr != NULL )
+        {
+#if ( ERROR_MESSAGE_FULL == DEF_TRUE )
             errorMessageLength = strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 );
             (void)memcpy( (void*)&retValue._errorMessage[0], (void*)errorMessagePtr, errorMessageLength );
             retValue._errorMessage[errorMessageLength] = '\0';           
+#endif
 
-            (void)LOG_ERROR( "Error Code: 0x%04X, Module: %s, Line: %u, Message: %s", errorCode, moduleName, lineNumber, retValue._errorMessage );
+            (void)LOG_ERROR( "Error Code: 0x%04X, Module: %s, Line: %u, Message: %s", errorCode, moduleName, lineNumber, errorMessagePtr );
             /* If the driver is initialized then add the error info to the circular buffer.
              If it is not initialized then we cannot log the error to the circular buffer. */
-            if( THIS->isInitialized == true )
+            if( THIS->_driverControl._driverInfo._isInitialized == true )
             {
-                (void)THIS->writeMemory( THIS->memoryAddress, (uint8_t*)&retValue, sizeof( sErrorInfo_t ) );
+                uint16_t writeCheck = THIS->writeMemoryFunction( THIS->_memoryAddress, 
+                                                                 (uint8_t*)&retValue, 
+                                                                 sizeof( sErrorInfo_t ), 
+                                                                 VERIFY_MEMORY_WRITE );
+                if( writeCheck != ERROR_NONE )
+                {
+                    /* Do not try to LOG this error as it will cause a recurrsion and stack overflow. Instead, 
+                       just set the error code and return it. */
+                    (void)LOG_CRITICAL( "Error Driver: Failed to write error info to memory. Error Code: 0x%04X", writeCheck );
+                }
             }
-
-        }
-        else
-        {
-            retValue = functionError;
         }
     }
 
     return retValue;
 }
 
+/***************************************Static Function Implementations ******/
+/**
+ * @brief Function to get the module ID of the error driver.
+ */
+static uint16_t getModuleId( void )
+{
+    return THIS->_driverControl._driverInfo._moduleID;
+}
 
+/**
+ * @brief Function to get the module version string of the error driver.
+ */
+static uint8_t const * getModuleVersionString( void )
+{
+    return THIS->_driverControl._driverInfo._moduleVersionString;
+}
 
+/**
+ * @brief Function to get the module version of the error driver.
+ */
+static sCommonVersionStruct_t getModuleVersion( void )
+{
+    return THIS->_driverControl._driverInfo._moduleVersion;
+}
+
+/**
+ * @brief Function to get the module name of the error driver.
+ */
+static uint8_t const * getModuleName( void )
+{
+    return THIS->_driverControl._driverInfo._moduleName;
+}
+
+/**
+ * @brief Function to check if the error driver is initialized.
+ */
+static bool isDriverInitialized( void )
+{
+    return THIS->_driverControl._driverInfo._isInitialized;
+}

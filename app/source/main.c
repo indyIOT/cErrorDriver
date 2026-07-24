@@ -16,21 +16,51 @@ static uint16_t fakeReadMemory( uint32_t address, uint8_t * const readValue, siz
 {
     if( address >= FAKE_MEMORY_WORDS )
     {
-        return 0U;
+        return -1;
+    }
+    else if( readValue == NULL )
+    {
+        return -2;
+    }
+    else if( readSize == 0 )
+    {
+        return -3;
+    }
+    else if( ( address + readSize ) > FAKE_MEMORY_WORDS )
+    {
+        return -4;
+    }
+    else
+    {
+        (void)memcpy( readValue, &gFakeMemory[address], readSize );
     }
 
-    return gFakeMemory[address];
+    return 0;
 }
 
-static uint16_t fakeWriteMemory( uint32_t address, uint8_t * value, size_t writSize )
+static uint16_t fakeWriteMemory( uint32_t address, uint8_t * value, size_t writeSize )
 {
-    if( address >= kFakeMemoryWords )
+    if( address >= FAKE_MEMORY_WORDS )
     {
-        return false;
+        return -1;
     }
-
-    gFakeMemory[address] = value;
-    return true;
+    else if( value == NULL )
+    {
+        return -2;
+    }
+    else if( writeSize == 0 )
+    {
+        return -3;
+    }
+    else if( ( address + writeSize ) > FAKE_MEMORY_WORDS )
+    {
+        return -4;
+    }
+    else
+    {
+        (void)memcpy( &gFakeMemory[address], value, writeSize );
+    }
+    return 0;
 }
 
 
@@ -42,6 +72,11 @@ static uint16_t fakeWriteMemory( uint32_t address, uint8_t * value, size_t writS
 int main( void )
 {
     int retValue = ERROR_NONE;
-    sErrorInfo_t
+    sErrorInfo_t errorInfo = initErrorDriver(
+        (readMemoryFunctionPtr_t)&fakeReadMemory,
+        (writeMemoryFunctionPtr_t)&fakeWriteMemory,
+        0U,
+        sizeof( gFakeMemory )
+    );
     return( retValue );
 }

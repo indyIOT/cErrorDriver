@@ -17,18 +17,18 @@ namespace
     constexpr std::size_t kFakeMemoryWords = 256U;
     std::uint32_t gFakeMemory[kFakeMemoryWords] = { 0U };
 
-    std::uint16_t fakeReadMemory( std::uint32_t address, std::uint8_t * const readValue, std::size_t readSize )
+    std::uint16_t fakeReadMemory( std::uint32_t address, std::uint8_t * const readBuffer, std::size_t readSize )
     {
         std::uint16_t returnValue = 0U;
         if( address < ( kFakeMemoryWords * sizeof( std::uint32_t ) ) )
         {
-            if( readValue != nullptr && readSize != 0U )
+            if( readBuffer != nullptr && readSize != 0U )
             {
                 if( readSize + address > ( kFakeMemoryWords * sizeof( std::uint32_t ) ) )
                 {
                     readSize = ( kFakeMemoryWords * sizeof( std::uint32_t ) ) - address;
                 }
-                std::memcpy( readValue, &gFakeMemory[address], readSize );
+                std::memcpy( readBuffer, &gFakeMemory[address], readSize );
                 returnValue = static_cast<std::uint16_t>(readSize);
             }
         }
@@ -59,8 +59,8 @@ namespace
 TEST( cErrorDriver, initErrorDriver )
 {
     sErrorInfo_t errorInfo = initErrorDriver(
-        (std::uint16_t*)&fakeReadMemory,
-        (std::uint16_t*)&fakeWriteMemory,
+        (readMemoryFunctionPtr_t)&fakeReadMemory,
+        (writeMemoryFunctionPtr_t)&fakeWriteMemory,
         0U,
         sizeof( gFakeMemory )
     );
