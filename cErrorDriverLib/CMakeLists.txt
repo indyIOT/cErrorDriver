@@ -67,9 +67,6 @@ endif()
 target_include_directories(${ERROR_DRIVER_LIBRARY_NAME}
     PRIVATE
         include
-        ../../cCommonTypes/include
-        ../../cLoggingDriver/cLoggingDriverLib/publicInclude
-        ../../cSemaphore/cSemaphoreLib/publicInclude
     PUBLIC
         publicInclude
 )
@@ -77,9 +74,7 @@ target_include_directories(${ERROR_DRIVER_LIBRARY_NAME}
 target_link_libraries(${ERROR_DRIVER_LIBRARY_NAME}
     PUBLIC
         cCommonMacros
-        commonTypes
-        cLoggingDriverLib
-        cSemaphoreLib
+        cCommonTypes
 )
 
 # Expose the generated header directory so consumers can #include it

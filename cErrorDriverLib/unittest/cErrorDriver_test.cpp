@@ -8,9 +8,10 @@
 #include <gtest/gtest.h>
 #include <cstddef>
 #include <cstdint>
+#include "commonMacros.h"
+#include "commonTypes.h"
 #include "../publicInclude/cErrorDriverPub.h"
 #include "../publicInclude/cErrorDriverConfig.h"
-#include "../publicInclude/cCommonErrorCodes.h"
 
 namespace 
 {
@@ -28,7 +29,7 @@ namespace
                 {
                     readSize = ( kFakeMemoryWords * sizeof( std::uint32_t ) ) - address;
                 }
-                std::memcpy( readBuffer, &gFakeMemory[address], readSize );
+                std::memcpy( readBuffer, reinterpret_cast<std::uint8_t*>( &gFakeMemory[address] ), readSize );
                 returnValue = static_cast<std::uint16_t>(readSize);
             }
         }
@@ -51,6 +52,17 @@ namespace
         }
         return returnValue;
     }
+
+    sErrorCompact_t fakeLogCallback( eLoggingType_t logType, uint16_t logKey, char const * const logMessage )
+    {
+        (void)logType;
+        (void)logKey;
+        (void)logMessage;
+
+        sErrorCompact_t errorInfo = { 0U };
+        return errorInfo;
+    }
+
 } // namespace
 
 /**
@@ -58,12 +70,13 @@ namespace
  */
 TEST( cErrorDriver, initErrorDriver )
 {
-    sErrorInfo_t errorInfo = initErrorDriver(
+    sErrorCompact_t errorInfo = initErrorDriver(
         (readMemoryFunctionPtr_t)&fakeReadMemory,
         (writeMemoryFunctionPtr_t)&fakeWriteMemory,
+        (logCallback_t)&fakeLogCallback,
         0U,
         sizeof( gFakeMemory )
     );
     
-    EXPECT_EQ( ERROR_NONE, errorInfo._compact._errorCode );
+    EXPECT_EQ( ERROR_NONE, errorInfo._errorCode );
 }

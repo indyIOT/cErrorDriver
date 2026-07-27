@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "CommonTypes.h"
+#include "cErrorDriverConfig.h"
 #include "cErrorDriverPub.h"
 #include "cCommonErrorCodes.h"
 
@@ -79,18 +80,20 @@ static const sErrorCodeMessagePair_t commonErrorCodeMessagePairs[] =
  * @param errorMessage Pointer to a buffer to store the error message.
  * @returns An error struct with ERROR_NONE if successful, or an error struct with an error code if unsuccessful.
  */
-sErrorInfo_t getCommonErrorMessageFromErrorCode( uint16_t const errorCode,
-                                                 uint8_t const * errorMessage )
+sErrorCompact_t getCommonErrorMessageFromErrorCode( uint16_t const errorCode,
+                                                    bool const autoStoreError,
+                                                    uint8_t const * errorMessage )
 {
-    sErrorInfo_t retValue = BLANK_ERROR_STRUCT;
+    sErrorCompact_t retValue = BLANK_ERROR_STRUCT;
     errorMessage = NULL;
     /**
      * range check the code.
      */
     if( errorCode < LAST_COMMON_ERROR_CODE )
-    {
-        retValue = CREATE_ERROR( ERROR_INVALID_PARAMETER, 
-                                 commonErrorCodeMessagePairs[ERROR_INVALID_PARAMETER]._errorMessage );
+    {        
+        retValue = CREATE_STORE_ERROR( ERROR_INVALID_PARAMETER,  
+                                       autoStoreError,                               
+                                       commonErrorCodeMessagePairs[ERROR_INVALID_PARAMETER]._errorMessage );
     }
     else
     {

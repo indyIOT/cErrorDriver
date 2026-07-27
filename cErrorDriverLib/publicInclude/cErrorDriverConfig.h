@@ -19,9 +19,16 @@ extern "C" {
 #ifndef CUSTOM_ERROR_DRIVER_CONFIG
 
 #define MAX_MODULE_COUNT                                                     100
-#define MAX_ERROR_MESSAGE_LENGTH_BYTES                                       100
-#define MAX_FILENAME_LENGTH_BYTES                                             52
+
+#ifdef MAX_ERROR_MESSAGE_LENGTH_BYTES
+#undef MAX_ERROR_MESSAGE_LENGTH_BYTES
+#endif
+#define MAX_ERROR_MESSAGE_LENGTH_BYTES 100
+#ifndef END_OF_COMMON_ERRORS
 #define END_OF_COMMON_ERRORS                                              0x0020
+#endif
+#define WRITE_ERROR_TO_MEMORY                                            DEF_TRUE
+#define MAX_FILENAME_LENGTH_BYTES                                             52
 #define ERROR_MESSAGE_FULL                                              DEF_TRUE
 #define VERIFY_MEMORY_WRITE                                                 TRUE
 #endif // CUSTOM_ERROR_DRIVER_CONFIG

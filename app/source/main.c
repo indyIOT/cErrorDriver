@@ -6,6 +6,7 @@
 ****************************************************************/
 
 #include <stdio.h>
+#include <stdarg.h>
 #include "commonMacros.h"
 #include "cErrorDriverPub.h"
 
@@ -63,6 +64,15 @@ static uint16_t fakeWriteMemory( uint32_t address, uint8_t * value, size_t write
     return 0;
 }
 
+static sErrorCompact_t fakeLogCallback(uint16_t moduleId,
+                                         uint16_t line,
+                                         eLoggingType_t type,
+                                         const char *message, ...)
+{
+    sErrorCompact_t errorInfo = BLANK_ERROR_STRUCT;
+    errorInfo._errorCode = ERROR_NONE;
+    return errorInfo;
+}
 
 /**
  * @brief Program Main entry for testing libraries.
@@ -72,9 +82,10 @@ static uint16_t fakeWriteMemory( uint32_t address, uint8_t * value, size_t write
 int main( void )
 {
     int retValue = ERROR_NONE;
-    sErrorInfo_t errorInfo = initErrorDriver(
+    sErrorCompact_t errorInfo = initErrorDriver(
         (readMemoryFunctionPtr_t)&fakeReadMemory,
         (writeMemoryFunctionPtr_t)&fakeWriteMemory,
+        (logCallback_t)&fakeLogCallback,
         0U,
         sizeof( gFakeMemory )
     );
