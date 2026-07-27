@@ -153,15 +153,6 @@ extern sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
                                         uint16_t memorySizeInBytes );
 
 
-
-/**
- * @brief Function to register a module with the error driver.
- * @param moduleName The name of the module to register
- * @param moduleId The ID of the module to register
- * @return an error uint16_t code if successful
- */
-extern uint16_t registerModule( const char * moduleName, uint16_t * const moduleId );
-
 /**
  * @brief Enter a watchdog-friendly spin loop after a debug assert failure.
  * @param expression The failed expression string.
