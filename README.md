@@ -16,7 +16,7 @@
 [![project_license][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
-<!-- PROJECT LOGO -->
+<!-- PROJECT Title -->
 <div align="center">
 <h3 align="center">cErrorDriver</h3>
   <p align="center">
@@ -48,6 +48,8 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
+    <li><a href="#top-contributors">Top Contributors</a></li>
+    <li><a href="#change-Log">Change Log</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
   </ol>
@@ -104,18 +106,22 @@ You need a c standard tool chain with CMake installed.
 
 
 
-<!-- USAGE EXAMPLES -->
+<!-- Usage -->
 ## Usage
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Top contributors:
+<!-- Top Contributors -->
+## Top Contributors
 
 <a href="https://github.com/indyIOT/cErrorDriver/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=indyIOT/cErrorDriver" alt="contrib.rocks image" />
 </a>
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
+<!-- Changelog -->
+## Change Log
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- LICENSE -->
 ## License

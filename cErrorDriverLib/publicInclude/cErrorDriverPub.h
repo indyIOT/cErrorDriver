@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-/*************************************** Typedefs **************************************/
+/***************************Public Typedefs ***********************************/
 #ifndef SCOMMON_ERROR_COMPACT
 #define SCOMMON_ERROR_COMPACT
 /**
@@ -76,7 +76,7 @@ typedef struct
  */
 #define CREATE_STORE_ERROR( errorCode, autoStoreError, errorMessage ) \
     createErrorCompact( errorCode, THIS->_driverControl._driverInfo._moduleID, __LINE__, autoStoreError, errorMessage, THIS->_driverControl._driverInfo._moduleName )
-
+/*****************************Public Interface Functions ***********************/
 /**
  * @brief Function to store an error with the error driver. 
  *        This will store the error information in a circular buffer for later retrieval.
@@ -142,13 +142,15 @@ extern void printAllErrors( void );
  *                   This is used to read the error information from the circular buffer.
  * @param writeMemory Pointer to a function for writing memory for the error driver.
  * @param logCallback Pointer to a function for logging errors. This is used to log errors to the logging driver.
+ * @param
  * @param memoryAddress The starting address of the memory to be used by the error driver.
  * @param memorySizeInBytes Size of the memory in bytes
  * @return sErrorCompact_t structure containing the error information if an error occurred.
  */
 extern sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
                                         writeMemoryFunctionPtr_t writeMemory,
-                                        logCallback_t logCallback,
+                                        logCallback_t logCallback,                                        
+                                        calculateCRC16FunctionPtr_t calculateCRC16Function,
                                         uint32_t memoryAddress,
                                         uint16_t memorySizeInBytes );
 

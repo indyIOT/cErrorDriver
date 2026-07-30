@@ -74,6 +74,13 @@ static sErrorCompact_t fakeLogCallback(uint16_t moduleId,
     return errorInfo;
 }
 
+static uint16_t fakeCalculateCRC16( uint8_t const * const data, size_t dataSize )
+{
+    (void)data;
+    (void)dataSize;
+    return 0xFFFF;
+}
+
 /**
  * @brief Program Main entry for testing libraries.
  * 
@@ -86,6 +93,7 @@ int main( void )
         (readMemoryFunctionPtr_t)&fakeReadMemory,
         (writeMemoryFunctionPtr_t)&fakeWriteMemory,
         (logCallback_t)&fakeLogCallback,
+        (calculateCRC16FunctionPtr_t)&fakeCalculateCRC16,
         0U,
         sizeof( gFakeMemory )
     );

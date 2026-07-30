@@ -4,6 +4,10 @@
  * @author Anthony Garza
  * @copyright All rights reserved 2026
 *************************************************/
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -21,6 +25,7 @@ typedef struct
     logCallback_t logMessageFunction; /* Pointer to a function for logging errors */
     readMemoryFunctionPtr_t readMemoryFunction; /* Pointer to a function that reads memory for the error driver */
     writeMemoryFunctionPtr_t writeMemoryFunction; /* Pointer to a function for writing memory for the error driver */
+    calculateCRC16FunctionPtr_t CRC16Function; /* Pointer to a function for calculating CRC16 */
     uint32_t _memoryAddress; /* The starting address of the memory to be used by the error driver */
     uint16_t _memorySizeInBytes; /* Size of the memory in bytes */
 } sErrorDriverControlStruct_t;
@@ -116,17 +121,19 @@ void cErrorDriverDebugAssertSpin( char const * const expression,
 sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
                                         writeMemoryFunctionPtr_t writeMemory,
                                         logCallback_t logCallback,
+                                        calculateCRC16FunctionPtr_t calculateCRC16Function,
                                         uint32_t memoryAddress,
                                         uint16_t memorySizeInBytes )
 {
     sErrorCompact_t retValue = BLANK_ERROR_STRUCT;
+    
     if( THIS->_driverControl._driverInfo._isInitialized == false )
     {
         /** Log callback can be null if logging is not required  */
         THIS->logMessageFunction = logCallback;
         THIS->_memoryAddress = memoryAddress;
         THIS->_memorySizeInBytes = memorySizeInBytes;
-                    /* These functions can be null esp if we are not writing to memory */
+        /* These functions can be null esp if we are not writing to memory */
         THIS->readMemoryFunction = NULL;
         THIS->writeMemoryFunction = NULL;
         #if ( WRITE_ERROR_TO_MEMORY == DEF_TRUE )
@@ -139,6 +146,17 @@ sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
                                           __LINE__, 
                                           LOGGING_TYPE_CRITICAL, 
                                           "Error Driver Initialization Failed: Read or Write Memory function pointer is NULL." );
+            }            
+        }
+        else if( calculateCRC16Function == NULL )
+        {
+            retValue = CREATE_ERROR( ERROR_NULL_POINTER, NULL );
+            if( THIS->logMessageFunction != NULL )
+            {
+                (void)THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, 
+                                          __LINE__, 
+                                          LOGGING_TYPE_CRITICAL, 
+                                          "Error Driver Initialization Failed: Calculate CRC16 function pointer is NULL." );
             }            
         }
         else 
@@ -158,6 +176,7 @@ sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
             {
                 THIS->readMemoryFunction = readMemory;
                 THIS->writeMemoryFunction = writeMemory;
+                THIS->CRC16Function = calculateCRC16Function;
             }
         }
         #endif
@@ -194,6 +213,7 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
     uint16_t writeCheck = ERROR_NONE;
     size_t errorMessageLength = 0;
     uint8_t const * errorMessagePtr = errorMessage;
+    sCRC16Config_t crc16Config = DEFAULT_CRC16_CONFIG;
     /* Only fill this structure out if the error code is non-zero */
     if( errorCode != ERROR_NONE )
     {
@@ -201,48 +221,77 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
         retValue._fileModuleEnum = fileModuleEnum;
         retValue._lineNumber = lineNumber;
         errorInfo._compact = retValue;
-        if( ( THIS->_driverControl._driverInfo._isInitialized == true ) && 
-            ( ( ( autoStoreError == true ) && ( THIS->writeMemoryFunction != NULL ) ) || 
-              ( THIS->logMessageFunction != NULL ) ) )
+        /* Only continue on if the driver is initialized */
+        if( THIS->_driverControl._driverInfo._isInitialized == true ) 
         {
-            /** Common Errors are just that. */
+            /** If this is a common error then get the appropriate message. */
             if( ( errorCode < END_OF_COMMON_ERRORS ) && 
                 ( ( errorMessagePtr == NULL ) || 
-                ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) ) )
+                  ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) ) )
             {
                 ( void )getCommonErrorMessageFromErrorCode( errorCode, false, errorMessagePtr );
             }
-        }
-        /* If we still have no error message then we should use the no error message available. */
-        if( ( errorMessagePtr == NULL ) || 
-            ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) )
-        {
-            errorMessagePtr = noErrorMessage;
-        }
 
-        /* Only do something with the error message if it exists  */
-        if( errorMessagePtr != NULL )
-        {     
+        
+            /* If we still have no error message then we should use the no error message available. */
+            if( ( errorMessagePtr == NULL ) || 
+                ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) )
+            {
+                errorMessagePtr = noErrorMessage;
+            }
+
+            /* CHeck to ensure that the message exists before logging it to the
+             error log or the system log. */
+            if( errorMessagePtr != NULL )
+            {
+                /** If the error log is storing the entire error message. */     
 #if ( ERROR_MESSAGE_FULL == DEF_TRUE )
-            errorMessageLength = strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 );
-            (void)memcpy( (void*)&errorInfo._errorMessage[0], (void*)errorMessagePtr, errorMessageLength );
-            errorInfo._errorMessage[errorMessageLength] = '\0';
+                if( ( autoStoreError == true ) && ( THIS->writeMemoryFunction != NULL ) )
+                {
+                    errorMessageLength = strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 );
+                    (void)memcpy( (void*)&errorInfo._errorMessage[0], (void*)errorMessagePtr, errorMessageLength );
+                    errorInfo._errorMessage[errorMessageLength] = '\0';
+                }
 #endif
+            }
+
+            /* Only call the CRC if the calcualte crc is not null */
+            if( THIS->CRC16Function != NULL )
+            {
+                /** Add the two CRCs onto the error info and compact structures. */
+                retValue._crc16 = THIS->CRC16Function( crc16Config, (uint8_t const * const)&retValue, sizeof( sErrorCompact_t ) - sizeof( retValue._crc16 ) );
+                errorInfo._crc16 = THIS->CRC16Function( crc16Config, (uint8_t const * const)&errorInfo, sizeof( sErrorInfo_t ) - sizeof( errorInfo._crc16 ) );
+            }
+
+
+            /* Log the message to teh system log if the logmessage function is set. */
             if( THIS->logMessageFunction != NULL )
             {
-                (void)THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, 
-                                          __LINE__, 
-                                          LOGGING_TYPE_ERROR, 
-                                          "Error Code: 0x%04X, Module: %s, Line: %u, Message: %s", errorCode, moduleName, lineNumber, errorMessagePtr );
+                if( errorMessagePtr != NULL )
+                {
+                    // Log Error without a message.
+                    (void)THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, 
+                                            __LINE__, 
+                                            LOGGING_TYPE_ERROR, 
+                                            "Error Code: 0x%04X, Module: %s, Line: %u, Message: %s", errorCode, moduleName, lineNumber, errorMessagePtr );
+                }
+                else
+                {
+                    // Log error without a message. 
+                    (void)THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, 
+                                            __LINE__, 
+                                            LOGGING_TYPE_ERROR, 
+                                            "Error Code: 0x%04X, Module: %s, Line: %u, Message: No error message available.", errorCode, moduleName, lineNumber );
+                }
             }
+            
             
             /* If the driver is initialized then add the error info to the circular buffer.
              If it is not initialized then we cannot log the error to the circular buffer. */
-            if( ( THIS->_driverControl._driverInfo._isInitialized == true ) && 
-                ( autoStoreError == true ) && 
+            if( ( autoStoreError == true ) && 
                 ( THIS->writeMemoryFunction != NULL ) )
             {
-                uint16_t writeCheck = THIS->writeMemoryFunction( THIS->_memoryAddress, 
+                writeCheck = THIS->writeMemoryFunction( THIS->_memoryAddress, 
                                                                  (uint8_t*)&errorInfo, 
                                                                  sizeof( sErrorInfo_t ), 
                                                                  VERIFY_MEMORY_WRITE );
@@ -303,3 +352,7 @@ static bool isDriverInitialized( void )
 {
     return ( THIS->_driverControl._driverInfo._isInitialized );
 }
+
+#ifdef __cplusplus
+}  /* extern "C" */
+#endif

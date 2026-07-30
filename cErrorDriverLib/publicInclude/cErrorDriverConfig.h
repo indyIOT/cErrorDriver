@@ -1,6 +1,6 @@
 /** ***********************************************
- * @file cErrorDriverConfigs.h
- * @brief Private interface for the error driver
+ * @file cErrorDriverConfig.h
+ * @brief Overridable configuration of the error driver.
  * @author Anthony Garza
  * @copyright All rights reserved 2026
 *************************************************/
@@ -18,7 +18,6 @@ extern "C" {
 
 #ifndef CUSTOM_ERROR_DRIVER_CONFIG
 
-#define MAX_MODULE_COUNT                                                     100
 
 #ifdef MAX_ERROR_MESSAGE_LENGTH_BYTES
 #undef MAX_ERROR_MESSAGE_LENGTH_BYTES
@@ -31,6 +30,7 @@ extern "C" {
 #define MAX_FILENAME_LENGTH_BYTES                                             52
 #define ERROR_MESSAGE_FULL                                              DEF_TRUE
 #define VERIFY_MEMORY_WRITE                                                 TRUE
+
 #endif // CUSTOM_ERROR_DRIVER_CONFIG
 #ifdef __cplusplus
 }  /* extern "C" */

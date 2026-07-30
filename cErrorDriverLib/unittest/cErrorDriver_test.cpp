@@ -59,8 +59,17 @@ namespace
         (void)logKey;
         (void)logMessage;
 
-        sErrorCompact_t errorInfo = { 0U };
+        sErrorCompact_t errorInfo = { 0};
         return errorInfo;
+    }
+
+    std::uint16_t fakeCalculateCRC16( sCRC16Config_t config, std::uint8_t const * const buffer, std::uint16_t const length )
+    {
+        (void)config;
+        (void)buffer;
+        (void)length;
+
+        return 0U; // Return a dummy CRC value for testing
     }
 
 } // namespace
@@ -74,6 +83,7 @@ TEST( cErrorDriver, initErrorDriver )
         (readMemoryFunctionPtr_t)&fakeReadMemory,
         (writeMemoryFunctionPtr_t)&fakeWriteMemory,
         (logCallback_t)&fakeLogCallback,
+        (calculateCRC16FunctionPtr_t)&fakeCalculateCRC16,
         0U,
         sizeof( gFakeMemory )
     );
