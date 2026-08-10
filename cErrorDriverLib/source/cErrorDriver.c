@@ -4,9 +4,6 @@
  * @author Anthony Garza
  * @copyright All rights reserved 2026
 *************************************************/
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -18,7 +15,11 @@ extern "C" {
 #include "cErrorDriverPub.h"
 #include "cErrorDriverVersion.h"
 #include "cCommonErrorCodes.h"
-/********************************Module Type definitions **********************/
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/******************************** Type definitions ****************************/
 typedef struct
 {
     sCommonDriverControlStruct_t _driverControl; /* Control structure for the error driver */
@@ -31,30 +32,47 @@ typedef struct
 } sErrorDriverControlStruct_t;
 
 
-/********************************Static Module Accessor functions Prototypes *************/
+/********************************Static functions Prototypes *************/
 static uint16_t getModuleId( void );
 static uint8_t const * getModuleVersionString( void );
 static sCommonVersionStruct_t getModuleVersion( void );
 static uint8_t const * getModuleName( void );
 static bool isDriverInitialized( void );
 
-/********************************Static Global Variables **********************/
-static const uint8_t moduleName[] = "ErrorDriver";
+/******************************** Static Global Variables **********************/
+static const uint8_t moduleName[] = "cErrorDriver";
+#define MODULE_ID 31905
+
+
+
+
+
+
+
+
+
+
+
+
+
 static const uint8_t noErrorMessage[] = "No error message available.";
 
 
 static sErrorDriverControlStruct_t errorDriverControlStruct = { 
     ._driverControl = { 
-        ._driverInfo = { ._isInitialized = false,
-                        ._moduleID = 0,
+        ._driverInfo = {
+                        ._moduleName = moduleName,
                         ._moduleVersionString = ERROR_DRIVER_VERSION_STRING,
+                        ._moduleID = MODULE_ID,                        
                         ._moduleVersion = { ._major = ERROR_DRIVER_VERSION_MAJOR,
                                             ._minor = ERROR_DRIVER_VERSION_MINOR,
                                             ._patch = ERROR_DRIVER_VERSION_PATCH,
                                             ._buildType = ERROR_DRIVER_VERSION_BUILD_TYPE_ENUM
                         },
-                        ._moduleName = moduleName },
-        ._driverAccessors = { .getModuleIdFunction = getModuleId,
+                        ._isInitialized = false
+},
+        ._driverAccessors = { 
+                            .getModuleIdFunction = getModuleId,
                             .getModuleVersionStringFunction = getModuleVersionString,
                             .getModuleNameFunction = getModuleName,
                             .getModuleVersionFunction = getModuleVersion,
@@ -69,25 +87,17 @@ static sErrorDriverControlStruct_t errorDriverControlStruct = {
 
 static sErrorDriverControlStruct_t * const THIS = &errorDriverControlStruct;
 
-/**************************** HELPER MACROS ***********************************************/
-#define LOG_CRIT( message, ... ) \
-    ( THIS->logMessageFunction != NULL ) ? \
-        THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, \
-                                  __LINE__, \
-                                  LOGGING_TYPE_CRITICAL, \
-                                  message, ##__VA_ARGS__ ) \
-    : BLANK_ERROR_STRUCT 
+/**************************** HELPER MACROS ************************************/
+#ifndef ERROR_NONE
+#define ERROR_NONE 0U
+#endif
+
+#ifndef NO_ERROR
+#define NO_ERROR 0U
+#endif
 
 
-#define LOG_ERR( message, ... )  \
-    ( THIS->logMessageFunction != NULL ) ? \
-        THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, \
-                                  __LINE__, \
-                                  LOGGING_TYPE_ERROR, \
-                                  message, ##__VA_ARGS__ ) \
-    : BLANK_ERROR_STRUCT 
-/****************************** Module Function implementations ***************/
-
+/****************************** Function implementations ***************/
 /**
  * @brief Enter a spin loop after a debug assert failure.
  * @note A debugger can change keepSpinning to false to escape the loop.
@@ -137,7 +147,8 @@ sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
         THIS->readMemoryFunction = NULL;
         THIS->writeMemoryFunction = NULL;
         #if ( WRITE_ERROR_TO_MEMORY == DEF_TRUE )
-        if( readMemory == NULL || writeMemory == NULL )
+        if( ( readMemory == NULL ) || 
+             ( writeMemory == NULL ) )
         {
             retValue = CREATE_ERROR( ERROR_NULL_POINTER, NULL );
             if( THIS->logMessageFunction != NULL )
@@ -159,27 +170,26 @@ sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
                                           "Error Driver Initialization Failed: Calculate CRC16 function pointer is NULL." );
             }            
         }
-        else 
+        else if( memorySizeInBytes < sizeof( sErrorCompact_t ) )
         {
-            if( memorySizeInBytes < sizeof( sErrorCompact_t ) )
+            // Memory size is too small to store even one error compact structure.
+            retValue = CREATE_ERROR( ERROR_INVALID_PARAMETER, NULL );
+            if( THIS->logMessageFunction != NULL )
             {
-                retValue = CREATE_ERROR( ERROR_INVALID_PARAMETER, NULL );
-                if( THIS->logMessageFunction != NULL )
-                {
-                    (void)THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, 
-                                            __LINE__, 
-                                            LOGGING_TYPE_CRITICAL, 
-                                            "Error Driver Initialization Failed: Memory size is too small. Minimum size required is %u bytes.", sizeof( sErrorCompact_t ) );
-                }                  
+                (void)THIS->logMessageFunction( THIS->_driverControl._driverInfo._moduleID, 
+                                        __LINE__, 
+                                        LOGGING_TYPE_CRITICAL, 
+                                        "Error Driver Initialization Failed: Memory size is too small. Minimum size required is %u bytes.", sizeof( sErrorCompact_t ) );
             }
-            else
-            {
-                THIS->readMemoryFunction = readMemory;
-                THIS->writeMemoryFunction = writeMemory;
-                THIS->CRC16Function = calculateCRC16Function;
-            }
+        }     
+        else
+        {
+            THIS->readMemoryFunction = readMemory;
+            THIS->writeMemoryFunction = writeMemory;
+            THIS->CRC16Function = calculateCRC16Function;
         }
         #endif
+        /* If there were no errors while initializing the driver. */
         if ( retValue._errorCode == ERROR_NONE )        
         {
             /* Initialize the circular buffer here. */
@@ -312,7 +322,7 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
     return ( retValue );
 }
 
-/***************************************Static Function Implementations ******/
+/************************ Static Function Implementations ***************/
 /**
  * @brief Function to get the module ID of the error driver.
  */

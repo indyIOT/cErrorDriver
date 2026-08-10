@@ -13,18 +13,30 @@
 #include "cErrorDriverPub.h"
 #include "cCommonErrorCodes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /** Error messsages only compiled and used if full errror message is enabled.*/
 #if ( ERROR_MESSAGE_FULL == DEF_TRUE )
-/** Typedefs used for the driver  */
+/******************************** Type definitions ****************************/
+
 typedef struct
 {
     sCommonDriverControlStruct_t _driverControl; /* The error code for this error */
 } sCommonErrorControlStruct_t;
-/************************** Static Global Variables ********************************/
-/**
- * @brief All source files should have a module name and ID. This allows for more precise error reporting.
- */
-static const uint8_t moduleName[] = "CommonErrors";
+
+/********************************Static functions Prototypes *************/
+static uint16_t getModuleId( void );
+static uint8_t const * getModuleVersionString( void );
+static sCommonVersionStruct_t getModuleVersion( void );
+static uint8_t const * getModuleName( void );
+static bool isDriverInitialized( void );
+
+/******************************** Static Global Variables **********************/
+static const uint8_t moduleName[] = "cCommonErrors";
+#define MODULE_ID 54556
+
+
 
 /**
  * @brief Control structure for this file allowing static variables to be called from a THIS pointer.
@@ -34,14 +46,14 @@ static const sCommonErrorControlStruct_t commonErrorModuleControl =
     ._driverControl = {
         ._driverInfo = {
             ._moduleName = moduleName,
-            ._moduleID   = 0x0000,
+            ._moduleID   = MODULE_ID,
             ._isInitialized = true
         },
         ._driverAccessors = {
-            .getModuleIdFunction = NULL,
-            .getModuleVersionStringFunction = NULL,
-            .getModuleNameFunction = NULL,
-            .isDriverInitializedFunction = NULL
+            .getModuleIdFunction = getModuleId,
+            .getModuleVersionStringFunction = getModuleVersionString,
+            .getModuleNameFunction = getModuleName,
+            .isDriverInitializedFunction = isDriverInitialized
         }
     }
 };
@@ -73,7 +85,16 @@ static const sErrorCodeMessagePair_t commonErrorCodeMessagePairs[] =
     { LAST_COMMON_ERROR_CODE,   "LAST" }
 };
 
-/************************************************** Extern Functions **************************************/
+/**************************** HELPER MACROS ************************************/
+#ifndef ERROR_NONE
+#define ERROR_NONE 0U
+#endif
+
+#ifndef NO_ERROR
+#define NO_ERROR 0U
+#endif
+
+/****************************** Function implementations ***************/
 /**
  * @brief Function to get the error message corresponding to a common error code.
  * @param errorCode The common error code to get the message for.
@@ -85,7 +106,7 @@ sErrorCompact_t getCommonErrorMessageFromErrorCode( uint16_t const errorCode,
                                                     uint8_t const * errorMessage )
 {
     sErrorCompact_t retValue = BLANK_ERROR_STRUCT;
-    errorMessage = NULL;
+    errorMessage = commonErrorCodeMessagePairs[ERROR_INVALID_PARAMETER]._errorMessage;;
     /**
      * range check the code.
      */
@@ -103,5 +124,64 @@ sErrorCompact_t getCommonErrorMessageFromErrorCode( uint16_t const errorCode,
     return ( retValue );
 }
 
-/****************************************************Static Functions  ***********************************/
+/************************ Static Function Implementations ***************/
+/**
+ * @brief Function to get the module ID of the error driver.
+ */
+static uint16_t getModuleId( void )
+{
+    return ( THIS->_driverControl._driverInfo._moduleID );
+}
+
+/**
+ * @brief Function to get the module version string of the error driver.
+ */
+static uint8_t const * getModuleVersionString( void )
+{
+    return ( THIS->_driverControl._driverInfo._moduleVersionString );
+}
+
+/**
+ * @brief Function to get the module version of the error driver.
+ */
+static sCommonVersionStruct_t getModuleVersion( void )
+{
+    return ( THIS->_driverControl._driverInfo._moduleVersion );
+}
+
+/**
+ * @brief Function to get the module name of the error driver.
+ */
+static uint8_t const * getModuleName( void )
+{
+    return ( THIS->_driverControl._driverInfo._moduleName );
+}
+
+/**
+ * @brief Function to check if the error driver is initialized.
+ */
+static bool isDriverInitialized( void )
+{
+    return ( THIS->_driverControl._driverInfo._isInitialized );
+}
+
+#ifdef __cplusplus
+}  /* extern "C" */
+#endif
+
 #endif // ERROR_MESSAGE_FULL
+
+
+
+
+
+
+
+
+
+
+/************************************************** Extern Functions **************************************/
+
+
+/****************************************************Static Functions  ***********************************/
+
