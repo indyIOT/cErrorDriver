@@ -220,8 +220,25 @@ sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
     return ( retValue );
 }
 
+#ifdef UNIT_TESTS
 /**
- * @brief Function to create an ERROR structure given an error code, line number, filename, 
+ * @brief Test-only hook that resets the error driver back to an uninitialized state.
+ * @note Compiled only when UNIT_TESTS is defined. See cErrorDriverPub.h.
+ */
+void resetErrorDriverForTest( void )
+{
+    THIS->_driverControl._driverInfo._isInitialized = false;
+    THIS->logMessageFunction = NULL;
+    THIS->readMemoryFunction = NULL;
+    THIS->writeMemoryFunction = NULL;
+    THIS->CRC16Function = NULL;
+    THIS->_memoryAddress = 0U;
+    THIS->_memorySizeInBytes = 0U;
+}
+#endif
+
+/**
+ * @brief Function to create an ERROR structure given an error code, line number, filename,
  *        and an error message.
  * @param errorMessage A message describing the error
  * @param fileModuleEnum The module ID where the error occurred.

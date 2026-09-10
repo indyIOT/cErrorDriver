@@ -75,6 +75,17 @@ target_link_libraries(${ERROR_DRIVER_LIBRARY_NAME}
         cCommonTypes
 )
 
+# Propagate UNIT_TESTS as a compile definition (PUBLIC so it also reaches anything
+# that links this library, e.g. cErrorDriverTest below) so the test-only reset hook
+# (resetErrorDriverForTest) compiles in. It is absent whenever UNIT_TESTS is OFF,
+# so it never ships in a release build.
+if( UNIT_TESTS )
+    target_compile_definitions(${ERROR_DRIVER_LIBRARY_NAME}
+        PUBLIC
+            UNIT_TESTS
+    )
+endif()
+
 # Expose the generated header directory so consumers can #include it
 target_include_directories(${ERROR_DRIVER_LIBRARY_NAME}
     PUBLIC

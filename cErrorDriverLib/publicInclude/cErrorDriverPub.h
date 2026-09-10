@@ -157,10 +157,20 @@ extern void printAllErrors( void );
  */
 extern sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
                                         writeMemoryFunctionPtr_t writeMemory,
-                                        logCallback_t logCallback,                                        
+                                        logCallback_t logCallback,
                                         calculateCRC16FunctionPtr_t calculateCRC16Function,
                                         uint32_t memoryAddress,
                                         uint16_t memorySizeInBytes );
+
+#ifdef UNIT_TESTS
+/**
+ * @brief Test-only hook that resets the error driver back to an uninitialized state.
+ * @note Compiled only when UNIT_TESTS is defined (see cErrorDriverLib/CMakeLists.txt).
+ *       Not present in production/release builds. Lets unit tests call
+ *       initErrorDriver() from a clean state instead of hitting ERROR_ALREADY_INITIALIZED.
+ */
+extern void resetErrorDriverForTest( void );
+#endif
 
 #if ( ( ERROR_MESSAGE_FULL == DEF_TRUE ) || ( LOG_FULL_ERROR_MESSAGE == DEF_TRUE ) )
 /**
