@@ -56,7 +56,15 @@ typedef struct
 #endif // SERROR_CODE_MESSAGE_PAIR
 /**************************** HELPER MACROS ***********************************/
 #ifndef BLANK_ERROR_STRUCT
-#define BLANK_ERROR_STRUCT {{ ERROR_NONE, 0, 0, 0, { 0 }, 0, 0 } }
+#define BLANK_ERROR_STRUCT { \
+    ._errorCode = ERROR_NONE, \
+    ._fileModuleEnum = 0U, \
+    ._lineNumber = 0, \
+    ._flags = 0, \
+    ._reserved = { 0 }, \
+    ._Unused16 = 0, \
+    ._crc16 = 0 \
+} 
 #endif
 
 /**
@@ -67,7 +75,7 @@ typedef struct
  * @return a compact error structure containing the error information.
  */
 #define CREATE_ERROR( errorCode, errorMessage ) \
-    createErrorCompact( errorCode, THIS->_driverControl._driverInfo._moduleID, __LINE__, false, errorMessage, THIS->_driverControl._driverInfo._moduleName )
+    createErrorCompact( errorCode, MODULE_ID, __LINE__, false, errorMessage, moduleName)
 /**
  * @brief Macro to create an error structure with the given parameters and store it in the error driver.
  * @param errorCode The error code for this error  
@@ -75,7 +83,7 @@ typedef struct
  * @return a compact error structure containing the error information.
  */
 #define CREATE_STORE_ERROR( errorCode, autoStoreError, errorMessage ) \
-    createErrorCompact( errorCode, THIS->_driverControl._driverInfo._moduleID, __LINE__, autoStoreError, errorMessage, THIS->_driverControl._driverInfo._moduleName )
+    createErrorCompact( errorCode, MODULE_ID, __LINE__, autoStoreError, errorMessage, moduleName )
 /*****************************Public Interface Functions ***********************/
 /**
  * @brief Function to store an error with the error driver. 
@@ -154,7 +162,19 @@ extern sErrorCompact_t initErrorDriver( readMemoryFunctionPtr_t readMemory,
                                         uint32_t memoryAddress,
                                         uint16_t memorySizeInBytes );
 
-
+#if ( ( ERROR_MESSAGE_FULL == DEF_TRUE ) || ( LOG_FULL_ERROR_MESSAGE == DEF_TRUE ) )
+/**
+ * @brief Function to get the error message corresponding error error code.
+ * @param errorCode The common error code to get the message for.
+ * @param errorMessage Pointer to a buffer to store the error message.
+ * @returns An error struct with ERROR_NONE if successful, or an error struct with an error code if unsuccessful.
+ */
+extern sErrorCompact_t getErrorMessageFromErrorCode( sErrorCodeMessagePair_t const * const errorCodeMessagePairs,
+                                              uint16_t const lastErrorCode,
+                                              uint16_t const errorCode,
+                                              bool const autoStoreError,
+                                              uint8_t const * errorMessage );
+#endif
 /**
  * @brief Enter a watchdog-friendly spin loop after a debug assert failure.
  * @param expression The failed expression string.
@@ -166,10 +186,12 @@ extern void cErrorDriverDebugAssertSpin( char const * const expression,
                                          unsigned int lineNumber );
 
 /**
- * @brief Function to get the error driver information. This will return a structure containing the error driver information.
+ * @brief Helper function to access the driver information in a ecapsulated way. 
+ *        This is used to get the module ID, version string, and other information 
+ *         about the error driver.
  * @return sCommonDriverAccessorStruct_t structure containing the error driver information.
  */
-extern sCommonDriverAccessorStruct_t const * const getErrorDriverInfo( void );
+extern sCommonDriverAccessorStruct_t const * const getErrorDriverInfoAccessors( void );
 
 #ifdef __cplusplus
 }  /* extern "C" */

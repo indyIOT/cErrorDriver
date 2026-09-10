@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 #pragma pack( push, 1 )
+
 /****************************Typedefs only used by error driver ***************/
 /**
  * @brief Structure for storing error information.

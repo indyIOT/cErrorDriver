@@ -43,20 +43,37 @@ static bool isDriverInitialized( void );
 static const uint8_t moduleName[] = "cErrorDriver";
 #define MODULE_ID 31905
 
+#if ( ( ERROR_MESSAGE_FULL == DEF_TRUE ) || ( LOG_FULL_ERROR_MESSAGE == DEF_TRUE ) )
 
+    /** @brief A string to use when no error message is available. */
+    static const uint8_t noErrorMessage[] = "No error message available.";
 
-
-
-
-
-
-
-
-
-
-
-static const uint8_t noErrorMessage[] = "No error message available.";
-
+    /** @brief No module name available. */
+    static const uint8_t noModuleName[] = "NoModule";
+    /**
+     * @brief Array of Error codes and their corresponding error messages. 
+     *        This is used to retrieve the error message given an error code.
+     *        The error codes are defined in cCommonErrorCodes.h and the error messages 
+     *        are defined in this file. 
+     *        The error codes are offset by the module ID to ensure that they are unique across all modules.
+     */
+    static const sErrorCodeMessagePair_t commonErrorCodeMessagePairs[] = 
+    {
+        { ERROR_NONE,               "" },
+        { ERROR_INVALID_PARAMETER,  "Invalid parameter" },
+        { ERROR_OUT_OF_MEMORY,      "Out of memory" },
+        { ERROR_BUFFER_OVERFLOW,    "Buffer overflow" },
+        { ERROR_BUFFER_UNDERFLOW,   "Buffer underflow" },
+        { ERROR_NULL_POINTER,       "Null pointer" },
+        { ERROR_INVALID_STATE,      "Invalid state" },
+        { ERROR_TIMEOUT,            "Timeout" },
+        { ERROR_NOT_IMPLEMENTED,    "Not implemented" },
+        { ERROR_UNKNOWN,            "Unknown error" },
+        { ERROR_UNINITIALIZED,      "Uninitialized" },
+        { ERROR_ALREADY_INITIALIZED,"Already initialized" },
+        { LAST_COMMON_ERROR_CODE,   "LAST" }
+    };
+#endif
 
 static sErrorDriverControlStruct_t errorDriverControlStruct = { 
     ._driverControl = { 
@@ -69,7 +86,7 @@ static sErrorDriverControlStruct_t errorDriverControlStruct = {
                                             ._patch = ERROR_DRIVER_VERSION_PATCH,
                                             ._buildType = ERROR_DRIVER_VERSION_BUILD_TYPE_ENUM
                         },
-                        ._isInitialized = false
+                         ._isInitialized = false
 },
         ._driverAccessors = { 
                             .getModuleIdFunction = getModuleId,
@@ -217,29 +234,47 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
                                  bool autoStoreError,
                                  uint8_t const * const errorMessage, 
                                  uint8_t const * const moduleName )
-{
-    sErrorCompact_t retValue = BLANK_ERROR_STRUCT;
+{    
     sErrorInfo_t errorInfo = { 0 };
+    sErrorCompact_t * retValue = &errorInfo._compact;
     uint16_t writeCheck = ERROR_NONE;
     size_t errorMessageLength = 0;
     uint8_t const * errorMessagePtr = errorMessage;
+    uint8_t const * filenamePtr = moduleName;
     sCRC16Config_t crc16Config = DEFAULT_CRC16_CONFIG;
     /* Only fill this structure out if the error code is non-zero */
     if( errorCode != ERROR_NONE )
     {
-        retValue._errorCode = errorCode;
-        retValue._fileModuleEnum = fileModuleEnum;
-        retValue._lineNumber = lineNumber;
-        errorInfo._compact = retValue;
+        retValue->_errorCode = errorCode;
+        retValue->_fileModuleEnum = fileModuleEnum;
+        retValue->_lineNumber = lineNumber;
+        if( filenamePtr == NULL )
+        {
+            filenamePtr = noModuleName;
+        }
+
         /* Only continue on if the driver is initialized */
         if( THIS->_driverControl._driverInfo._isInitialized == true ) 
         {
+#if ( ( ERROR_MESSAGE_FULL == DEF_TRUE ) || ( LOG_FULL_ERROR_MESSAGE == DEF_TRUE ) )
+
+            /** If the error message is null or empty then we should use the no error message available. */
+            if( ( errorMessagePtr == NULL ) || 
+                ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) )
+            {
+                errorMessagePtr = noErrorMessage;
+            }
+
             /** If this is a common error then get the appropriate message. */
             if( ( errorCode < END_OF_COMMON_ERRORS ) && 
                 ( ( errorMessagePtr == NULL ) || 
                   ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) ) )
             {
-                ( void )getCommonErrorMessageFromErrorCode( errorCode, false, errorMessagePtr );
+                ( void )getErrorMessageFromErrorCode( commonErrorCodeMessagePairs, 
+                                                      LAST_COMMON_ERROR_CODE, 
+                                                      errorCode, 
+                                                      false, 
+                                                      errorMessagePtr );
             }
 
         
@@ -249,31 +284,45 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
             {
                 errorMessagePtr = noErrorMessage;
             }
-
+#if ( ERROR_MESSAGE_FULL == DEF_TRUE )
             /* CHeck to ensure that the message exists before logging it to the
              error log or the system log. */
             if( errorMessagePtr != NULL )
             {
                 /** If the error log is storing the entire error message. */     
-#if ( ERROR_MESSAGE_FULL == DEF_TRUE )
                 if( ( autoStoreError == true ) && ( THIS->writeMemoryFunction != NULL ) )
                 {
                     errorMessageLength = strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 );
                     (void)memcpy( (void*)&errorInfo._errorMessage[0], (void*)errorMessagePtr, errorMessageLength );
                     errorInfo._errorMessage[errorMessageLength] = '\0';
                 }
-#endif
+
             }
 
+            /** 
+             * Place the module name into the error info structure. If the module name is null then we should use the no module name available.
+             * If the module name is not null then we should use the provided module name.    
+             */
+            if( filenamePtr != NULL )
+            {
+                (void)memcpy( (void*)&errorInfo._filename[0], (void*)filenamePtr, strnlen( (const char *)filenamePtr, MAX_FILENAME_LENGTH_BYTES - 1 ) );
+            }
+            else
+            {
+                (void)memcpy( (void*)&errorInfo._filename[0], (void*)noModuleName, strnlen( (const char *)noModuleName, MAX_FILENAME_LENGTH_BYTES - 1 ) );
+            }
+#endif
+
+#endif
             /* Only call the CRC if the calcualte crc is not null */
             if( THIS->CRC16Function != NULL )
             {
                 /** Add the two CRCs onto the error info and compact structures. */
-                retValue._crc16 = THIS->CRC16Function( crc16Config, (uint8_t const * const)&retValue, sizeof( sErrorCompact_t ) - sizeof( retValue._crc16 ) );
+                retValue->_crc16 = THIS->CRC16Function( crc16Config, (uint8_t const * const)&retValue, sizeof( sErrorCompact_t ) - sizeof( retValue->_crc16 ) );
                 errorInfo._crc16 = THIS->CRC16Function( crc16Config, (uint8_t const * const)&errorInfo, sizeof( sErrorInfo_t ) - sizeof( errorInfo._crc16 ) );
             }
 
-
+#if ( LOG_FULL_ERROR_MESSAGE == DEF_TRUE )
             /* Log the message to teh system log if the logmessage function is set. */
             if( THIS->logMessageFunction != NULL )
             {
@@ -294,7 +343,7 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
                                             "Error Code: 0x%04X, Module: %s, Line: %u, Message: No error message available.", errorCode, moduleName, lineNumber );
                 }
             }
-            
+#endif
             
             /* If the driver is initialized then add the error info to the circular buffer.
              If it is not initialized then we cannot log the error to the circular buffer. */
@@ -319,9 +368,52 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
         }
     }
 
-    return ( retValue );
+    return ( *retValue );
 }
 
+/**
+ * @brief Function to get the Error driver information.
+ *        This will return a structure containing accessors to
+ *        get the module ID, version string, and other information
+ *        about the error driver.
+ */
+sCommonDriverAccessorStruct_t const * const getErrorDriverInfoAccessors( void )
+{
+    return (sCommonDriverAccessorStruct_t const * const)( &THIS->_driverControl._driverAccessors );
+}
+
+#if ( ( ERROR_MESSAGE_FULL == DEF_TRUE ) || ( LOG_FULL_ERROR_MESSAGE == DEF_TRUE ) )
+/**
+ * @brief Function to get the error message corresponding error error code.
+ * @param errorCode The common error code to get the message for.
+ * @param errorMessage Pointer to a buffer to store the error message.
+ * @returns An error struct with ERROR_NONE if successful, or an error struct with an error code if unsuccessful.
+ */
+sErrorCompact_t getErrorMessageFromErrorCode( sErrorCodeMessagePair_t const * const errorCodeMessagePairs,
+                                              uint16_t const lastErrorCode,
+                                              uint16_t const errorCode,
+                                              bool const autoStoreError,
+                                              uint8_t const * errorMessage )
+{
+    sErrorCompact_t retValue = BLANK_ERROR_STRUCT;
+    errorMessage = noErrorMessage;
+    /**
+     * range check the code.
+     */
+    if( errorCode >= lastErrorCode )
+    {        
+        retValue = CREATE_STORE_ERROR( ERROR_INVALID_PARAMETER,  
+                                       autoStoreError,                               
+                                       commonErrorCodeMessagePairs[ERROR_INVALID_PARAMETER]._errorMessage );
+    }
+    else
+    {
+        errorMessage = errorCodeMessagePairs[errorCode]._errorMessage;
+    }
+   
+    return ( retValue );
+}
+#endif
 /************************ Static Function Implementations ***************/
 /**
  * @brief Function to get the module ID of the error driver.

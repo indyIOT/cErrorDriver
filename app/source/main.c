@@ -64,17 +64,28 @@ static uint16_t fakeWriteMemory( uint32_t address, uint8_t * value, size_t write
     return 0;
 }
 
-static sErrorCompact_t fakeLogCallback(uint16_t moduleId,
-                                         uint16_t line,
-                                         eLoggingType_t type,
-                                         const char *message, ...)
+
+
+sErrorCompact_t fakeLogCallback( uint16_t moduleId,
+                                 uint16_t line,
+                                 eLoggingType_t type,
+                                 const char *message, ... )
 {
-    sErrorCompact_t errorInfo = BLANK_ERROR_STRUCT;
-    errorInfo._errorCode = ERROR_NONE;
-    return errorInfo;
+    sErrorCompact_t retValue = { 0 };
+    va_list args;
+
+    printf( "[Module %u, Line %u, Type %d] ", moduleId, line, (int)type );
+
+    va_start( args, message );
+    vprintf( message, args );      /* substitutes the varargs into message and prints it */
+    va_end( args );
+
+    printf( "\n" );
+
+    return retValue;
 }
 
-static uint16_t fakeCalculateCRC16( uint8_t const * const data, size_t dataSize )
+static uint16_t fakeCalculateCRC16( void const * const data, size_t dataSize )
 {
     (void)data;
     (void)dataSize;

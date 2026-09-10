@@ -55,12 +55,10 @@ endif()
 if( COMPILE_ERROR_DRIVER_LIBRARY_STATIC )
     add_library(${ERROR_DRIVER_LIBRARY_NAME} STATIC
         source/cErrorDriver.c
-        source/cCommonErrors.c
     )
 else()
     add_library(${ERROR_DRIVER_LIBRARY_NAME} SHARED
         source/cErrorDriver.c
-        source/cCommonErrors.c
     )
 endif()
 
