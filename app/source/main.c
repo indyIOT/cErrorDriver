@@ -85,11 +85,17 @@ sErrorCompact_t fakeLogCallback( uint16_t moduleId,
     return retValue;
 }
 
-static uint16_t fakeCalculateCRC16( void const * const data, size_t dataSize )
+static sErrorCompact_t fakeCalculateCRC16( sCRC16Config_t const * const config, 
+                                         void const * const buffer,
+                                         size_t const length,
+                                         uint16_t * const crc16Value )
 {
-    (void)data;
-    (void)dataSize;
-    return 0xFFFF;
+    sErrorCompact_t retValue = BLANK_ERROR_STRUCT;
+    (void)config;
+    (void)buffer;
+    (void)length;
+    *crc16Value = 0xFFFF;
+    return retValue;
 }
 
 /**

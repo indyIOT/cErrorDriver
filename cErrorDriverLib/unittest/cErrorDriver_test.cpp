@@ -99,12 +99,14 @@ namespace
         return retValue;
     }
 
-    uint16_t fakeCalculateCRC16( sCRC16Config_t config, void const * const buffer, size_t const length )
+    sErrorCompact_t fakeCalculateCRC16( sCRC16Config_t config, void const * const buffer, size_t const length, uint16_t * const crc16Value )
     {
+        sErrorCompact_t retValue = { 0 };
         (void)config;
         (void)buffer;
         (void)length;
-        return 0xAA55U; // fixed dummy CRC for testing
+        *crc16Value = 0xAA55U; // fixed dummy CRC for testing
+        return retValue;
     }
 
     /**
@@ -423,6 +425,23 @@ TEST_F( ErrorDriverTest, AccessorsReportVersionInfo )
 
     sCommonVersionStruct_t version = accessors->getModuleVersionFunction();
     EXPECT_EQ( STATIC_LIBRARY_BUILD, version._buildType ); // COMPILE_ERROR_DRIVER_LIBRARY_STATIC is ON
+}
+
+TEST_F( ErrorDriverTest, AccessorsVersionStructAndStringAgreeForVersionChecking )
+{
+    // An app might version-check via the structured major/minor/patch fields, or
+    // by parsing/logging the human-readable string -- both should agree. The
+    // generated string's format is "MAJOR.MINOR.PATCH.BUILDTYPE.TIMESTAMP".
+    sCommonDriverAccessorStruct_t const * const accessors = getErrorDriverInfoAccessors();
+
+    string versionStr( reinterpret_cast<char const *>( accessors->getModuleVersionStringFunction() ) );
+    sCommonVersionStruct_t version = accessors->getModuleVersionFunction();
+
+    string expectedPrefix = to_string( version._major ) + "." +
+                            to_string( version._minor ) + "." +
+                            to_string( version._patch ) + ".";
+    EXPECT_EQ( 0U, versionStr.rfind( expectedPrefix, 0U ) )
+        << "version string '" << versionStr << "' did not start with '" << expectedPrefix << "'";
 }
 
 TEST_F( ErrorDriverTest, AccessorsIsDriverInitializedReflectsState )

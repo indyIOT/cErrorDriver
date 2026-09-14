@@ -287,6 +287,8 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
                 ( ( errorMessagePtr == NULL ) || 
                   ( strnlen( (const char *)errorMessagePtr, MAX_ERROR_MESSAGE_LENGTH_BYTES - 1 ) == 0 ) ) )
             {
+                /* Error discarded here because an error is handled gracefully within
+                the called function.  */
                 ( void )getErrorMessageFromErrorCode( commonErrorCodeMessagePairs, 
                                                       LAST_COMMON_ERROR_CODE, 
                                                       errorCode, 
@@ -334,9 +336,10 @@ sErrorCompact_t createErrorCompact( uint16_t errorCode,
             /* Only call the CRC if the calcualte crc is not null */
             if( THIS->CRC16Function != NULL )
             {
-                /** Add the two CRCs onto the error info and compact structures. */
-                retValue->_crc16 = THIS->CRC16Function( crc16Config, (uint8_t const * const)&retValue, sizeof( sErrorCompact_t ) - sizeof( retValue->_crc16 ) );
-                errorInfo._crc16 = THIS->CRC16Function( crc16Config, (uint8_t const * const)&errorInfo, sizeof( sErrorInfo_t ) - sizeof( errorInfo._crc16 ) );
+                /* Add the two CRCs onto the error info and compact structures. */
+                (void)THIS->CRC16Function( &crc16Config, (uint8_t const * const)retValue, sizeof( sErrorCompact_t ) - sizeof( retValue->_crc16 ), &retValue->_crc16 );
+                (void)THIS->CRC16Function( &crc16Config, (uint8_t const * const)&errorInfo, sizeof( sErrorInfo_t ) - sizeof( errorInfo._crc16 ), &errorInfo._crc16 );
+                /* If the CRC error failed we are already in an error state and cascading errors are not handled other than by console log. */
             }
 
 #if ( LOG_FULL_ERROR_MESSAGE == DEF_TRUE )
