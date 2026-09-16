@@ -33,12 +33,11 @@ typedef struct
             uint16_t _errorCode; /* The error code for this error */
             uint16_t _fileModuleEnum; /* The file module enum where the error occurred */
         };
-        uint32_t _errorCodeAndFileModuleEnum; /* Combined error code and file module enum for compact storage */        
+        uint32_t _errorDetails; /* Combined error code and file module enum for compact storage */
     };
     uint16_t _lineNumber; /* The line number where the error occurred */
     uint8_t  _flags; /* Whether or not this error info is valid */
-    uint8_t  _reserved[7]; /* Reserved for future use */
-    uint16_t _Unused16; /* Currently unused, reserved for future use */
+    uint8_t  _reserved[3]; /* Reserved for future use */
     uint16_t _crc16; /* CRC16 of the error info for integrity checking */
 } sErrorCompact_t;
 #pragma pack( pop )
@@ -62,7 +61,6 @@ typedef struct
     ._lineNumber = 0, \
     ._flags = 0, \
     ._reserved = { 0 }, \
-    ._Unused16 = 0, \
     ._crc16 = 0 \
 } 
 #endif
